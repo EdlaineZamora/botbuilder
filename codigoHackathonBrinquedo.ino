@@ -11,31 +11,33 @@
 #define PROCESSANDO_ERRO 5
 #define PROCESSANDO_ACERTO 6
 #define PROCESSANDO_VITORIA 7
+#define AGUARDANDO_INICIO 8
 
 #define BUZZER 6
 #define PAUSA 20
 
 #define NIVEL_MAXIMO 4
 
-Servo s;
-Servo s2;
+Servo servo;
+Servo servo2;
 
 int pinosLeds[4] = { 8, 9, 10, 11 };
 int pinosBotoes[4] = { 2, 3, 4, 5 };
 int sequencia[100] = {};
 int notas[4] = {262, 294, 330, 349};
+int botaoStart = 13;
 
-int estadoDaAplicacao = APRESENTACAO;
+int estadoDaAplicacao = AGUARDANDO_INICIO;
 int nivel = -1;
 int indexInputUsuario = 0;
 int inputUsuario = -1;
 
 void setup() {
-  s.attach(SERVO1);
-  s2.attach(SERVO2);
+  servo.attach(SERVO1);
+  servo2.attach(SERVO2);
   Serial.begin(9600);
-  s.write(30);
-  s2.write(150);
+  servo.write(30);
+  servo2.write(150);
   
   for (int i = 0; i < 4; i++) {
     pinMode(pinosLeds[i], OUTPUT);
@@ -45,12 +47,15 @@ void setup() {
     pinMode(pinosBotoes[i], INPUT_PULLUP);
   }
 
+  pinMode(botaoStart, INPUT_PULLUP);
+
   pinMode(BUZZER, OUTPUT);
   randomSeed(analogRead(0));
 }
 
 void loop() {
   switch(estadoDaAplicacao){
+    case(AGUARDANDO_INICIO): doInicio(); break;
     case(APRESENTACAO): doApresentacao(); break;
     case(EXIBICAO_SEQUENCIA): doExibicaoSequencia(); break;
     case(AGUARDANDO_INPUT): doAguardandoInput(); break;
@@ -58,6 +63,13 @@ void loop() {
     case(PROCESSANDO_ERRO): doProcessandoErro(); break;
     case(PROCESSANDO_ACERTO): doProcessandoAcerto(); break;
     case(PROCESSANDO_VITORIA): doProcessandoVitoria(); break;
+  }
+}
+
+void doInicio() {
+  if (digitalRead(botaoStart) == LOW) {
+        estadoDaAplicacao = APRESENTACAO;
+        delay(100);
   }
 }
 
@@ -86,14 +98,14 @@ void doExibicaoSequencia(){
 void doProcessandoVitoria() {
   int pos = 0;
   for(pos = 30; pos < 180; pos+=1) {
-    s.write(pos);
-    s2.write(180-pos);
+    servo.write(pos);
+    servo2.write(180-pos);
     delay(15);
   }
   tocar_musica();
   for(pos = 180; pos >= 30; pos-=2) {
-    s.write(pos);
-    s2.write(180-pos);
+    servo.write(pos);
+    servo2.write(180-pos);
     delay(15);
   }
 }
@@ -104,6 +116,9 @@ void doAguardandoInput(){
       if (digitalRead(pinosBotoes[i]) == LOW) {
         novoInputUsuario = i;
       }
+  }
+  if (digitalRead(botaoStart) == LOW) {
+    estadoDaAplicacao = APRESENTACAO;
   }
   if(inputUsuario != -1 && novoInputUsuario == -1){
     novoInputUsuario = inputUsuario;
@@ -157,14 +172,14 @@ void doProcessandoAcertoServo() {
     posicaoFinal = 180;
   }
   for (pos = 30; pos < posicaoFinal; pos+=1) {
-    s.write(pos);
-    s2.write(180-pos);
+    servo.write(pos);
+    servo2.write(180-pos);
     delay(15);
   }
   delay(500);
   if (posicaoFinal != 180) for (pos = posicaoFinal; pos >= 30; pos-=1) {
-    s.write(pos);
-    s2.write(180-pos);
+    servo.write(pos);
+    servo2.write(180-pos);
     delay(5);
   }  
 }
@@ -172,7 +187,7 @@ void doProcessandoAcertoServo() {
 void tocar(int cod){
   tone(BUZZER, notas[cod]);
   digitalWrite(pinosLeds[cod], HIGH);
-  delay(300);
+  delay(600);
   digitalWrite(pinosLeds[cod], LOW);
   noTone(BUZZER);
   delay(200);
@@ -309,10 +324,18 @@ void tocar_musica(){
   notada(330, 2400);
   }
   delay(800);
-  estadoDaAplicacao = APRESENTACAO;  
-  }
+  finaliza();
+  
+}
 
-  void tocaPerdeu(){
+void finaliza() {
+  estadoDaAplicacao = AGUARDANDO_INICIO;
+  for (int i = 0; i < 4; i++) {
+    digitalWrite(pinosLeds[i], LOW);
+  }
+}
+
+void tocaPerdeu(){
     
     notaFunebre(262, 600, 1);
     
@@ -334,15 +357,14 @@ void tocar_musica(){
 
     noTone(BUZZER);
     delay(600);
-  }
+}
 
-  void notaFunebre(int f, int tempo, int led){
+void notaFunebre(int f, int tempo, int led){
     digitalWrite(pinosLeds[led], HIGH);
     notada(f, tempo);
     digitalWrite(pinosLeds[led], LOW);     
-  }
-
-  int deveParar(){
+}
+int deveParar(){
     digitalWrite(pinosLeds[random(0,4)], HIGH);
     digitalWrite(pinosLeds[random(0,4)], LOW);
     if(estadoDaAplicacao == PROCESSANDO_VITORIA)  {
