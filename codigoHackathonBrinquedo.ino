@@ -48,6 +48,7 @@ void setup() {
   }
 
   pinMode(botaoStart, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(botaoStart), resetar, CHANGE);  
 
   pinMode(BUZZER, OUTPUT);
   randomSeed(analogRead(0));
@@ -367,6 +368,9 @@ void notaFunebre(int f, int tempo, int led){
 int deveParar(){
     digitalWrite(pinosLeds[random(0,4)], HIGH);
     digitalWrite(pinosLeds[random(0,4)], LOW);
+    if(estadoDaAplicacao == APRESENTACAO)  {
+      return true;
+    }
     if(estadoDaAplicacao == PROCESSANDO_VITORIA)  {
         int novoInputUsuario = -1;
         for (int i = 0; i <= 3; i++) {
@@ -380,5 +384,8 @@ int deveParar(){
         }
     }
     return false;
+  }
+  void resetar(){
+    estadoDaAplicacao = APRESENTACAO;
   }
 
